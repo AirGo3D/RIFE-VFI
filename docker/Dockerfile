@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 FROM python:3.8-slim
 
 # install deps
@@ -7,7 +8,7 @@ RUN apt-get update && apt-get -y install \
 # setup RIFE
 WORKDIR /rife
 COPY . .
-RUN pip3 install -r requirements.txt
+RUN --mount=type=cache,target=/root/.cache/pip pip3 install -r requirements.txt
 
 ADD docker/inference_img /usr/local/bin/inference_img
 RUN chmod +x /usr/local/bin/inference_img
@@ -20,4 +21,4 @@ COPY train_log /rife/train_log
 WORKDIR /host
 ENTRYPOINT ["/bin/bash"]
 
-ENV NVIDIA_DRIVER_CAPABILITIES all
+ENV NVIDIA_DRIVER_CAPABILITIES=all

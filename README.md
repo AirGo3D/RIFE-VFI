@@ -195,3 +195,16 @@ Optical Flow:
 
 Video Interpolation: 
 [DVF](https://github.com/lxx1991/pytorch-voxel-flow)  [TOflow](https://github.com/Coldog2333/pytoflow)  [SepConv](https://github.com/sniklaus/sepconv-slomo)  [DAIN](https://github.com/baowenbo/DAIN)  [CAIN](https://github.com/myungsub/CAIN)  [MEMC-Net](https://github.com/baowenbo/MEMC-Net)   [SoftSplat](https://github.com/sniklaus/softmax-splatting)  [BMBC](https://github.com/JunHeum/BMBC)  [EDSC](https://github.com/Xianhang/EDSC-pytorch)  [EQVI](https://github.com/lyh-18/EQVI)
+
+
+## VideoWalk VFI usage (this fork)
+
+The VideoWalk pipeline generates `output_vfi.mp4` (x8 interpolation) with:
+```
+python3 Frame_interpolation.py --video input.mp4 --output output_vfi.mp4 --multi 8 --fp16
+```
+- `--multi N` = interpolation factor (VideoWalk uses 8; output fps = input fps x N
+- with duration unchanged; frame count ~= (N-1)*frames+1).
+- Model: `train_log/` (v3.x HD `flownet.pkl` + `RIFE_HDv3`/`IFNet_HDv3`/`refine`).
+- Entry used by `VfiGenerator/generate_vfi.py` (conda env `RIFE`).
+

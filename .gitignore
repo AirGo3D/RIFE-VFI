@@ -12,3 +12,8 @@ test/
 *.npz
 
 *.zip
+
+# shipped model artifacts (required for docker build + inference)
+!train_log/flownet.pkl
+!train_log/*.py
+
