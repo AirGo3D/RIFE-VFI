@@ -1,0 +1,66 @@
+# CodeBuild project for the RIFE-VFI interpolation image.
+#
+# This buildspec builds docker/Dockerfile (repo root as context) and pushes
+# the image to ECR. Base is the public python:3.8-slim - no ECR dependency.
+#
+# Project settings that are NOT in this file and that this pipeline depends on:
+#   * privilegedMode: true      -- required for `docker build` inside CodeBuild
+#   * timeoutInMinutes: 60      -- pip install + ~6.5GB image push
+#   * image: aws/codebuild/standard:7.0 (Docker + AWS CLI v2 preinstalled)
+#   * computeType: general.medium or larger (pip/torch install wants RAM)
+#
+# Project environment variables:
+#   AWS_DEFAULT_REGION          AWS region, e.g. ap-southeast-1
+#   AWS_ACCOUNT_ID              AWS account id, e.g. 778636156833
+#   IMAGE_REPO_NAME             ECR repository for this image, e.g. rife-vfi
+#   IMAGE_TAG                   image tag, e.g. 1.0.0
+#
+# First time only - create the ECR repository:
+#   aws ecr create-repository --repository-name rife-vfi --region ap-southeast-1
+
+version: 0.2
+
+env:
+  variables:
+    IMAGE_TAG: "1.0.0"
+
+phases:
+  install:
+    commands:
+      - docker version
+      - aws --version
+
+  pre_build:
+    commands:
+      - |
+        set -eu
+        : "${AWS_DEFAULT_REGION:?set this on the CodeBuild project}"
+        : "${AWS_ACCOUNT_ID:?set this on the CodeBuild project}"
+        : "${IMAGE_REPO_NAME:?set this on the CodeBuild project}"
+        : "${IMAGE_TAG:?set this on the CodeBuild project}"
+      - export ECR_REGISTRY="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com"
+      - export RIFE_IMAGE="$ECR_REGISTRY/$IMAGE_REPO_NAME:$IMAGE_TAG"
+      - echo "rife=$RIFE_IMAGE"
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+  build:
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image...
+      # The Dockerfile uses `RUN --mount=type=cache` (BuildKit) - force it on
+      # in case the CodeBuild docker CLI still defaults to the legacy builder.
+      - export DOCKER_BUILDKIT=1
+      - docker build --file docker/Dockerfile --tag "$IMAGE_REPO_NAME:$IMAGE_TAG" .
+      - docker tag "$IMAGE_REPO_NAME:$IMAGE_TAG" "$RIFE_IMAGE"
+
+  post_build:
+    commands:
+      - |
+        if [ "${CODEBUILD_BUILD_SUCCEEDING:-0}" = "1" ]; then
+          echo "Build completed; pushing $RIFE_IMAGE"
+          docker push "$RIFE_IMAGE"
+        else
+          echo "Build failed; skipping image push"
+          exit 1
+        fi

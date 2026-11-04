@@ -1,0 +1,3 @@
+# keep the docker build context small: VCS + CI files are not needed in the image
+.git
+ci
